@@ -1,0 +1,387 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Baba Shabir Game</title>
+
+<style>
+*{
+    margin:0;
+    padding:0;
+    box-sizing:border-box;
+}
+
+body{
+    overflow:hidden;
+    background:black;
+    font-family:Arial,sans-serif;
+}
+
+canvas{
+    display:block;
+    background:black;
+}
+
+#score{
+    position:absolute;
+    top:20px;
+    left:20px;
+    color:white;
+    font-size:30px;
+    font-weight:bold;
+    z-index:10;
+}
+
+#speed{
+    position:absolute;
+    top:60px;
+    left:20px;
+    color:#00ffcc;
+    font-size:24px;
+    font-weight:bold;
+    z-index:10;
+}
+
+#gameOver{
+    position:absolute;
+    top:50%;
+    left:50%;
+    transform:translate(-50%,-50%);
+    color:white;
+    font-size:50px;
+    text-align:center;
+    display:none;
+}
+
+button{
+    margin-top:20px;
+    padding:15px 35px;
+    font-size:22px;
+    border:none;
+    border-radius:10px;
+    cursor:pointer;
+}
+</style>
+</head>
+
+<body>
+
+<div id="score">Score: 0</div>
+<div id="speed">Speed: 8</div>
+
+<div id="gameOver">
+    😅 kya baat hai aapko?
+    <br>
+    <button onclick="restartGame()">Replay</button>
+</div>
+
+<canvas id="gameCanvas"></canvas>
+
+<script>
+
+const canvas = document.getElementById("gameCanvas");
+const ctx = canvas.getContext("2d");
+
+canvas.width = window.innerWidth;
+canvas.height = window.innerHeight;
+
+const scoreText = document.getElementById("score");
+const speedText = document.getElementById("speed");
+const gameOverDiv = document.getElementById("gameOver");
+
+
+// ================= PLAYER IMAGE =================
+
+const playerImg = new Image();
+playerImg.src = "ChatGPT Image May 13, 2026, 08_10_45 PM (1).jpg";
+
+
+// ================= PLAYER =================
+
+const player = {
+    x:100,
+    y:canvas.height - 220,
+    width:120,
+    height:120,
+    velocityY:0,
+    gravity:0.8,
+    jumpPower:-18,
+    grounded:true
+};
+
+
+// ================= GAME =================
+
+let obstacles = [];
+let score = 0;
+let speed = 8;
+let gameRunning = true;
+
+
+// ================= JUMP =================
+
+function jump(){
+
+    if(player.grounded){
+
+        player.velocityY = player.jumpPower;
+        player.grounded = false;
+
+    }
+
+}
+
+window.addEventListener("keydown",(e)=>{
+
+    if(e.code === "Space"){
+        jump();
+    }
+
+});
+
+window.addEventListener("click",jump);
+
+
+// ================= DRAW PLAYER =================
+
+function drawPlayer(){
+
+    // shadow
+    ctx.fillStyle = "rgba(255,255,255,0.2)";
+
+    ctx.beginPath();
+
+    ctx.ellipse(
+        player.x + player.width/2,
+        player.y + player.height + 10,
+        30,
+        10,
+        0,
+        0,
+        Math.PI * 2
+    );
+
+    ctx.fill();
+
+    // image
+    ctx.drawImage(
+        playerImg,
+        player.x,
+        player.y,
+        player.width,
+        player.height
+    );
+
+}
+
+
+// ================= GROUND =================
+
+function drawGround(){
+
+    ctx.fillStyle = "#111";
+
+    ctx.fillRect(
+        0,
+        canvas.height - 80,
+        canvas.width,
+        80
+    );
+
+}
+
+
+// ================= CREATE OBSTACLE =================
+
+function createObstacle(){
+
+    obstacles.push({
+
+        x:canvas.width,
+        y:canvas.height - 140,
+        width:50,
+        height:60
+
+    });
+
+}
+
+
+// ================= DRAW OBSTACLES =================
+
+function drawObstacles(){
+
+    ctx.fillStyle = "red";
+
+    obstacles.forEach((obstacle)=>{
+
+        ctx.fillRect(
+            obstacle.x,
+            obstacle.y,
+            obstacle.width,
+            obstacle.height
+        );
+
+    });
+
+}
+
+
+// ================= UPDATE =================
+
+function update(){
+
+    if(!gameRunning) return;
+
+
+    // gravity
+
+    player.velocityY += player.gravity;
+    player.y += player.velocityY;
+
+
+    // ground collision
+
+    if(player.y + player.height >= canvas.height - 80){
+
+        player.y = canvas.height - 80 - player.height;
+        player.velocityY = 0;
+        player.grounded = true;
+
+    }
+
+
+    // obstacles movement
+
+    obstacles.forEach((obstacle)=>{
+
+        obstacle.x -= speed;
+
+
+        // collision
+
+        if(
+
+            player.x < obstacle.x + obstacle.width &&
+            player.x + player.width > obstacle.x &&
+            player.y < obstacle.y + obstacle.height &&
+            player.y + player.height > obstacle.y
+
+        ){
+
+            gameOver();
+
+        }
+
+    });
+
+
+    // remove old obstacles
+
+    obstacles = obstacles.filter((obstacle)=>{
+
+        if(obstacle.x + obstacle.width > 0){
+
+            return true;
+
+        }else{
+
+            score++;
+
+            // SPEED BOOST EVERY 10 SCORE
+            if(score % 10 === 0){
+
+                speed += 2;
+
+            }
+
+            scoreText.innerText = "Score: " + score;
+            speedText.innerText = "Speed: " + speed;
+
+            return false;
+
+        }
+
+    });
+
+}
+
+
+// ================= RENDER =================
+
+function render(){
+
+    ctx.clearRect(0,0,canvas.width,canvas.height);
+
+    drawGround();
+    drawPlayer();
+    drawObstacles();
+
+}
+
+
+// ================= GAME LOOP =================
+
+function gameLoop(){
+
+    update();
+    render();
+
+    requestAnimationFrame(gameLoop);
+
+}
+
+
+// ================= GAME OVER =================
+
+function gameOver(){
+
+    gameRunning = false;
+
+    gameOverDiv.style.display = "block";
+
+}
+
+
+// ================= RESTART =================
+
+function restartGame(){
+
+    obstacles = [];
+    score = 0;
+    speed = 8;
+
+    gameRunning = true;
+
+    player.y = canvas.height - 220;
+    player.velocityY = 0;
+
+    scoreText.innerText = "Score: 0";
+    speedText.innerText = "Speed: 8";
+
+    gameOverDiv.style.display = "none";
+
+}
+
+
+// ================= SPAWN OBSTACLES =================
+
+setInterval(()=>{
+
+    if(gameRunning){
+
+        createObstacle();
+
+    }
+
+},1500);
+
+
+// ================= START =================
+
+gameLoop();
+
+</script>
+</body>
+</html>
